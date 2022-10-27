@@ -316,6 +316,7 @@ def infer_dannce_max_trt(
         idx = model.engine.get_binding_index(model.input_names[0])
         dtype = torch_dtype_from_trt(model.engine.get_binding_dtype(idx))
         shape = tuple(model.context.get_binding_shape(idx))
+        if shape[0]==-1: shape = (1, *shape[1:])
         input = torch.empty(size=shape, dtype=dtype).cuda()
         output = model(input)
         dtype = output.dtype

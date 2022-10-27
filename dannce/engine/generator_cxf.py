@@ -6,8 +6,6 @@ from tensorflow import keras
 from dannce.engine import processing_cxf as processing
 from dannce.engine import ops as ops
 from dannce.engine.video import LoadVideoFrame
-import imageio
-from nvjpeg import NvJpeg
 import warnings
 import time
 import scipy.ndimage.interpolation
@@ -24,7 +22,14 @@ from typing import List, Dict, Tuple, Text
 import ffmpegcv
 from lilab.mmdet_dev.canvas_reader import CanvasReader
 from lilab.cvutils_new.canvas_reader_pannel import CanvasReaderPannelMask, CanvasReaderPannel
-nj = NvJpeg()
+
+
+try:
+    from nvjpeg import NvJpeg
+    nj = NvJpeg()
+    imread = nj.read
+except:
+    from imageio import imread
 
 class DataGenerator(keras.utils.Sequence):
     """Generate data for Keras.
@@ -504,8 +509,8 @@ class DataGenerator_3Dconv(DataGenerator):
 
             views = get_view_xywh_wrapper(len(self.camera_params[experimentID]))
             imfile = self.labels[ID]
-            im_canvas = imageio.imread(imfile) #old
-            # im_canvas = nj.read(imfile) #new
+            # im_canvas = imageio.imread(imfile) #old
+            im_canvas = imread(imfile) #new
             ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
 
             for _ci, camname in enumerate(self.camnames[experimentID]):
@@ -1124,8 +1129,8 @@ class DataGenerator_3Dconv_torch_aug(DataGenerator):
             else:
                 views = get_view_xywh_wrapper(len(self.camera_params[experimentID]))
                 imfile = self.labels[ID]
-                im_canvas = imageio.imread(imfile)  #old
-                # im_canvas = nj.read(imfile)  #new
+                # im_canvas = imageio.imread(imfile)  #old
+                im_canvas = imread(imfile)  #new
                 # print('Load image tooks {} sec.'.format(time.time()-ts))
                 ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
                 for c in range(num_cams):
@@ -1741,7 +1746,7 @@ class DataGenerator_3Dconv_torch(DataGenerator):
                 views = get_view_xywh_wrapper(len(self.camera_params[experimentID]))
                 imfile = self.labels[ID]
                 # im_canvas = imageio.imread(imfile)  #old
-                im_canvas = nj.read(imfile)  #new
+                im_canvas = imread(imfile)  #new
                 # print('Load image tooks {} sec.'.format(time.time()-ts))
                 ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
                 for c in range(num_cams):
@@ -2227,6 +2232,13 @@ class DataGenerator_3Dconv_torch_video_canvas(DataGenerator_3Dconv_torch):
             return [X, X_grid], y_3d
 
 
+def rectify_com3d_nan(coms_3d):
+    zero_coms3d = np.nanmean(coms_3d.reshape(-1,coms_3d.shape[-1]), axis=0)
+    ind_nan = np.any(np.isnan(coms_3d), axis=-1)
+    coms_3d[ind_nan] = zero_coms3d
+    return coms_3d
+
+
 class DataGenerator_3Dconv_torch_video_canvas_faster(DataGenerator_3Dconv_torch):
     def set_video(self, videopath, gpu, pkldata):
         assert os.path.exists(videopath), "Video file not found"
@@ -2240,6 +2252,7 @@ class DataGenerator_3Dconv_torch_video_canvas_faster(DataGenerator_3Dconv_torch)
         self.device = torch.device(f"cuda:{gpu}")
 
         coms_3d = self.vid.pkl_data['coms_3d']
+        coms_3d = rectify_com3d_nan(coms_3d)
         coms_3d = coms_3d.reshape(-1, coms_3d.shape[-1])
         self.init_grids(coms_3d)
 

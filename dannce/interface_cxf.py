@@ -1142,7 +1142,7 @@ def dannce_predict_video(params: Dict, video_file: str):
 
     # Generate the dataset
     flag = params['predict_video_single_rat'] # use single animal and no mask
-    genfunc = DataGenerator_3Dconv_torch_video if flag else DataGenerator_3Dconv_torch_video_single
+    genfunc = DataGenerator_3Dconv_torch_video_single if flag else DataGenerator_3Dconv_torch_video
     
     valid_generator = genfunc(
         partition["valid_sampleIDs"],
@@ -1289,6 +1289,12 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     Args:
         params (Dict): Paremeters dictionary.
     """
+    # Save 
+    import yaml
+    params['crop_width'] = np.array(params['crop_width']).tolist()
+    params['crop_height'] = np.array(params['crop_height']).tolist()
+    yaml.dump(params, open('params.yaml', 'w'))
+
     # Depth disabled until next release.
     params["depth"] = False
     n_views = int(params["n_views"])
@@ -1362,7 +1368,7 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
 
     # Generate the dataset
     flag = params['predict_video_single_rat'] # use single animal and no mask
-    genfunc = DataGenerator_3Dconv_torch_video_single if flag else DataGenerator_3Dconv_torch_video_single 
+    genfunc = DataGenerator_3Dconv_torch_video_single if flag else DataGenerator_3Dconv_torch_video
     
     valid_generator = genfunc(
         partition["valid_sampleIDs"],
@@ -1437,3 +1443,15 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
         pmax=True,
         otherParams=otherParams,
     )
+
+def new_func1(pkldata):
+    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
+    return camParams
+
+def new_func(pkldata):
+    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
+    return camParams
+
+def new_func(pkldata):
+    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
+    return camParams
