@@ -185,6 +185,9 @@ def add_shared_args(
         "--gpu-id", dest="gpu_id", help="String identifying GPU to use."
     )
     parser.add_argument(
+        "--vol-size", dest="vol_size", type=int, help="Volumetric size of the model."
+    )
+    parser.add_argument(
         "--immode", dest="immode", help="Data format for images."
     )
 

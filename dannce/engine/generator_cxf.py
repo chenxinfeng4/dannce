@@ -1332,7 +1332,8 @@ class DataGenerator_3Dconv_torch(DataGenerator):
         mono=False,
         mirror=False,
         predict_flag=False,
-        exp_voxel_size = None
+        exp_voxel_size = None,
+        return_Xgrid=False  #cxf private
     ):
         """Initialize data generator.
 
@@ -1425,6 +1426,7 @@ class DataGenerator_3Dconv_torch(DataGenerator):
         self.norm_im = norm_im
         self.exp_voxel_size = exp_voxel_size
 
+        self.return_Xgrid = return_Xgrid
         # importing torch here allows other modes to run without pytorch installed
         gpu_id_tf = os.getenv('CUDA_VISIBLE_DEVICES').split(',')[int(gpu_id)]
         self.device = torch.device(f"cuda:{gpu_id_tf}")
@@ -1685,7 +1687,7 @@ class DataGenerator_3Dconv_torch(DataGenerator):
             this_COM_3d = torch.as_tensor(
                 self.com3d[ID], dtype=torch.float32, device=self.device
             )
-            this_COM_3d[2] += torch.rand([], device=self.device) * 40 - 20  # random z-axis offset
+            # this_COM_3d[2] += torch.rand([], device=self.device) * 40 - 20  # random z-axis offset
             # Create and project the grid here,
             grids = torch.arange(vmin + vsize/2, vmax, vsize, 
                 dtype=torch.float32,
@@ -1852,9 +1854,9 @@ class DataGenerator_3Dconv_torch(DataGenerator):
             y_3d = y_3d.cpu().numpy()
         # print('Numpy took {} sec'.format(time.time() - ts))
 
+        if torch.is_tensor(X_grid):
+            X_grid = X_grid.cpu().numpy()
         if self.expval:
-            if torch.is_tensor(X_grid):
-                X_grid = X_grid.cpu().numpy()
             if self.var_reg:
                 return (
                     [processing.preprocess_3d(X), X_grid],
@@ -1868,7 +1870,10 @@ class DataGenerator_3Dconv_torch(DataGenerator):
                 return [X, X_grid], y_3d
         else:
             if self.norm_im:
-                return processing.preprocess_3d(X), y_3d
+                X = processing.preprocess_3d(X)
+            if self.return_Xgrid:
+                X_grid = X_grid.reshape(*X.shape[:-1], X_grid.shape[-1])
+                return [X, X_grid], y_3d
             else:
                 return X, y_3d
 
@@ -2809,8 +2814,13 @@ class DataGenerator_3Dconv_frommem(keras.utils.Sequence):
         if np.random.random() < 0.5 and not self.expval:
             flipidx = [0,2,1,3,4,5,8,9,6,7,12,13,10,11]
             X= np.flip(X, axis=1)
-            y_3d = np.flip(y_3d, axis=1)
-            y_3d = y_3d[...,flipidx]
+            y_3d_tmp = y_3d[...,None,:]
+            y_3d_tmp2 = y_3d_tmp.reshape(*y_3d.shape[:-1],-1,14)
+            y_3d_tmp3 = np.flip(y_3d_tmp2, axis=1)
+            y_3d_tmp4 = y_3d_tmp3[...,flipidx]
+            y_3d = y_3d_tmp4.reshape(*y_3d.shape[:-1],-1)
+            # y_3d = np.flip(y_3d, axis=1)
+            # y_3d = y_3d[...,flipidx]
 
         if np.random.random() < 0.5 and self.chan_num==1:  # random deactivate a camera
             blackind = np.random.choice(X.shape[-1], 1)

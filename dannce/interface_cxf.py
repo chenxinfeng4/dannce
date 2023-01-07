@@ -204,6 +204,17 @@ def dannce_train(params: Dict):
 
     for e, expdict in enumerate(exps):
         pts3d_T, com3d, camParams, imageNames, vol_size = load_label3d_dataset(expdict["label3d_file"])
+        
+        com3d_2 = com3d + np.concatenate([(np.random.rand(com3d.shape[0],2)-0.5)*20,
+                                (np.random.rand(com3d.shape[0],1)-0.5)*40], axis=1)
+        com3d_3 = com3d + np.concatenate([(np.random.rand(com3d.shape[0],2)-0.5)*20,
+                                (np.random.rand(com3d.shape[0],1)-0.5)*30], axis=1)
+        if False:
+            com3d = np.concatenate([com3d, com3d_3], axis=0)
+            pts3d_T = np.concatenate([pts3d_T, pts3d_T], axis=0)
+        else:
+            com3d = com3d_2
+        imageNames = imageNames * 2
         ntime = pts3d_T.shape[0]
         exp_id = str(e)
         frame_id = [exp_id+'_'+str(i) for i in range(ntime)]
@@ -251,7 +262,7 @@ def dannce_train(params: Dict):
     partition = processing.make_data_splits(
             samples, params, dannce_train_dir, num_experiments
         )
-
+    partition["train_sampleIDs"]=samples #no split cxf
     if params["use_npy"]:
         # mono conversion will happen from RGB npy files, and the generator
         # needs to b aware that the npy files contain RGB content
@@ -436,10 +447,7 @@ def dannce_train(params: Dict):
     # Now we can generate from memory with shuffling, rotation, etc.
     randflag = params["channel_combo"] == "random"
 
-    if cam3_train:
-        params["n_rand_views"] = 3
-        params["rand_view_replace"] = False
-        randflag = True
+    assert not cam3_train
 
     if params["n_rand_views"] == 0:
         print("Using default n_rand_views augmentation with {} views and with replacement".format(n_views))
@@ -465,7 +473,7 @@ def dannce_train(params: Dict):
                          'random': randflag,
                          'n_rand_views': params["n_rand_views"],
                          }
-    shared_args_valid = {'batch_size': 4,
+    shared_args_valid = {'batch_size': params["batch_size"],
                          'rotation': False,
                          'augment_hue': False,
                          'augment_brightness': False,
@@ -749,7 +757,8 @@ def dannce_predict(params: Dict):
     # While we can use experiment files for DANNCE training,
     # for prediction we use the base data files present in the main config
     # Grab the input file for prediction
-    params["label3d_file"] = processing.grab_predict_label3d_file()
+    params["label3d_file"] = params["predict_exp"][0]["label3d_file"]
+    # params["label3d_file"] = processing.grab_predict_label3d_file()
     params["base_exp_folder"] = os.path.dirname(params["label3d_file"])
 
     # default to slow numpy backend if there is no predict_mode in config file. I.e. legacy support
@@ -769,7 +778,7 @@ def dannce_predict(params: Dict):
     params["experiment"] = {}
     exp_voxel_size = {}
     for e, expdict in enumerate(exps):
-        pts3d_T, com3d, camParams, imageNames, vol_size = load_label3d_dataset(expdict['predict3d_file'])
+        pts3d_T, com3d, camParams, imageNames, vol_size = load_label3d_dataset(expdict['label3d_file'])
         ntime = pts3d_T.shape[0]
         pts3d_T *= 0
         exp_id = str(e)
@@ -787,11 +796,15 @@ def dannce_predict(params: Dict):
 
     samples = np.array(samples)
     vids = None
-    params['camParams'] = camParams
+    params['camParams'] = camParams #cxf
     
     # For real mono prediction
     params["chan_num"] = 1 if params["mono"] else params["n_channels_in"]
 
+    if params["expval"]:
+        outmode = "coordinates"
+    else:
+        outmode = "3dprob"
 
     # Parameters
     valid_params = {
@@ -800,7 +813,7 @@ def dannce_predict(params: Dict):
             params["crop_width"][1] - params["crop_width"][0],
         ),
         "n_channels_in": params["n_channels_in"],
-        "batch_size": params["batch_size"],
+        "batch_size": 1,
         "n_channels_out": params["n_channels_out"],
         "out_scale": params["sigma"],
         "crop_width": params["crop_width"],
@@ -811,7 +824,7 @@ def dannce_predict(params: Dict):
         "interp": params["interp"],
         "depth": params["depth"],
         "channel_combo": params["channel_combo"],
-        "mode": "coordinates",
+        "mode": outmode,
         "camnames": camnames,
         "immode": params["immode"],
         "shuffle": False,
@@ -824,7 +837,8 @@ def dannce_predict(params: Dict):
         "mono": params["mono"],
         "mirror": params["mirror"],
         "predict_flag": True,
-        "exp_voxel_size": exp_voxel_size
+        "exp_voxel_size": exp_voxel_size,
+        "return_Xgrid": True
     }
 
     # Datasets
@@ -838,7 +852,6 @@ def dannce_predict(params: Dict):
     # Generators
     if predict_mode == "torch":
         import torch
-
         # Because CUDA_VISBILE_DEVICES is already set to a single GPU, the gpu_id here should be "0"
         device = "cuda:0"
         genfunc = DataGenerator_3Dconv_torch
@@ -866,21 +879,8 @@ def dannce_predict(params: Dict):
     # As a precaution, we import all possible custom objects that could be used
     # by a model and thus need declarations
 
-    if params["dannce_predict_model"] is not None:
-        mdl_file = params["dannce_predict_model"]
-    else:
-        wdir = params["dannce_train_dir"]
-        weights = os.listdir(wdir)
-        weights = [f for f in weights if ".hdf5" in f and "checkpoint" not in f]
-        weights = sorted(
-            weights, key=lambda x: int(x.split(".")[1].split("-")[0])
-        )
-        weights = weights[-1]
-
-        mdl_file = os.path.join(wdir, weights)
-        # if not using dannce_predict model (thus taking the final weights in train_results),
-        # set this file to dannce_predict_model so that it will still get saved with metadata
-        params["dannce_predict_model"] = mdl_file
+    assert params["dannce_predict_model"] is not None
+    mdl_file = params["dannce_predict_model"]
 
     print("Loading model from " + mdl_file)
 
@@ -962,10 +962,7 @@ def dannce_predict(params: Dict):
     if max_eval_batch == "max":
         max_eval_batch = len(valid_generator)
 
-    if params["start_batch"] is not None:
-        start_batch = params["start_batch"]
-    else:
-        start_batch = 0
+    start_batch = 0
 
     if params["new_n_channels_out"] is not None:
         n_chn = params["new_n_channels_out"]
@@ -983,9 +980,10 @@ def dannce_predict(params: Dict):
         print("Done, exiting program")
         sys.exit()
 
-    device = "/GPU:0"
+    # device = "/GPU:0"
     save_data={}
-    save_data = inference.infer_dannce(
+    infer_dannce = inference.infer_dannce if params["expval"] else inference.infer_dannce_max
+    save_data = infer_dannce(
         start_batch,
         max_eval_batch,
         valid_generator,
@@ -1002,37 +1000,18 @@ def dannce_predict(params: Dict):
                     'vol_size': vol_size,
                     'camParams': camParams,
                     'camnames': camnames}
-    if params["expval"]:
-        path = os.path.join(params["dannce_predict_dir"], 
-                    os.path.splitext(os.path.basename(expdict['predict3d_file']))[0] + "_AVG.mat")
-        p_n = savedata_expval(
-            path,
-            params,
-            write=True,
-            data=save_data,
-            tcoord=False,
-            num_markers=n_chn,
-            pmax=True,
-            otherParams=otherParams
-        )
-    else:
-        if params["start_batch"] is not None:
-            path = os.path.join(
-                params["dannce_predict_dir"], "save_data_MAX%d.mat" % (start_batch)
-            )
-        else:
-            path = os.path.join(params["dannce_predict_dir"], "save_data_MAX.mat")
-        p_n = savedata_tomat(
-            path,
-            params,
-            params["vmin"],
-            params["vmax"],
-            params["nvox"],
-            write=True,
-            data=save_data,
-            num_markers=n_chn,
-            tcoord=False
-        )
+    mdl_filebase = os.path.basename(os.path.splitext(mdl_file)[0])
+    path = os.path.join(params["dannce_predict_dir"], f"{mdl_filebase}_dannce_predict.mat")
+    p_n = savedata_expval(
+        path,
+        params,
+        write=True,
+        data=save_data,
+        tcoord=False,
+        num_markers=n_chn,
+        pmax=True,
+        otherParams=otherParams,
+    )
 
 def dannce_predict_video(params: Dict, video_file: str):
     """Predict with dannce network

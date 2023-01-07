@@ -1,4 +1,4 @@
-from lilab.multiview_scripts_new.s4_matpkl2matcalibpkl import build_input_short, project_points_short
+from lilab.multiview_scripts_dev.s4_matpkl2matcalibpkl import build_input_short, project_points_short
 from scipy.ndimage.measurements import center_of_mass
 import numpy as np
 
