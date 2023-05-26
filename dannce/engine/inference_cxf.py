@@ -326,6 +326,12 @@ def infer_dannce_max_trt(
 
         X, X_grid = input.cpu().numpy(), np.zeros((*shape[:-1], 2), dtype='float16')
 
+        # for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
+        #     assert not params["expval"]
+        #     # pred_wait = mid_gpu(X, dtype, model)
+        #     X_next, X_grid_next = pre_cpu(generator, i)
+        # return 
+
         for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
             assert not params["expval"]
             pred_wait = mid_gpu(X, dtype, model)
@@ -339,7 +345,10 @@ def infer_dannce_max_trt(
         torch.cuda.current_stream().synchronize()
         pred = pred_wait
         post_cpu(pred,X_grid,idx,i,partition, save_data)
-        
+
+        if hasattr(generator, 'release'):
+            generator.release()
+            
     return save_data
 
 def pre_cpu(generator, i):

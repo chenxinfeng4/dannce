@@ -56,4 +56,4 @@ raw_im_w: 1280
 nvox: 64
 
 ### Video prediction ###
-max_eval_batch: 30*60*0.5 #[number | null]
+max_eval_batch: null #[number | null]
