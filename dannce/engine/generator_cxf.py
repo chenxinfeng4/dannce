@@ -2275,7 +2275,8 @@ class DataGenerator_3Dconv_torch_video_canvas_faster(DataGenerator_3Dconv_torch)
 
     def __data_generation(self, list_IDs_temp):
         self.batch_size = self.nclass
-        im_pannels_nclass = self.vid.read_canvas_mask_img_out()
+        # im_pannels_nclass = self.vid.read_canvas_mask_img_out()
+        im_pannels_nclass = np.zeros((2,9,800,1280,1),dtype=np.uint8)
         assert len(im_pannels_nclass) == self.batch_size == len(list_IDs_temp)
         assert not self.depth
         assert self.mode == "3dprob"
@@ -2366,39 +2367,26 @@ class DataGenerator_3Dconv_torch_video_canvas_faster(DataGenerator_3Dconv_torch)
             self.checked_imsize = True
 
         ## Case 1: sample by grid_sample
-        # proj_grid_voxel_ncam_roi = self.proj_grid_voxel_ncam[:,
-        #                                 com_range[1][0]:com_range[1][1], 
-        #                                 com_range[0][0]:com_range[0][1], 
-        #                                 com_range[2][0]:com_range[2][1],
-        #                                 :]   #(ncam, nvox_y, nvox_x, nvox_z, 2)
-        # arglist = [(ims[icam], proj_grid_voxel_ncam_roi[icam], 'nearest')
-        #                 for icam in range(self.ncam)]
-        # result = [sample_grid(*args) for args in arglist]
-
         ## Case 2: sample by grid_sample with faster index
         proj_grid_voxel_ncam_indravel_roi = self.proj_grid_voxel_ncam_indravel[:,
                                         com_range[1][0]:com_range[1][1], 
                                         com_range[0][0]:com_range[0][1], 
                                         com_range[2][0]:com_range[2][1],
                                         :]   #(ncam, nvox_y, nvox_x, nvox_z, 1)
+        proj_grid_voxel_ncam_indravel_roi = np.ascontiguousarray(proj_grid_voxel_ncam_indravel_roi)
         arglist = [(ims[icam], proj_grid_voxel_ncam_indravel_roi[icam], 'nearest')
                         for icam in range(self.ncam)]
-        result = [sample_grid_ravel(*args) for args in arglist]
-
-        X = np.empty(
-            (1, self.ncam, self.nvox, self.nvox, self.nvox),
-            dtype="float32",
-        )
-        for icam in range(self.ncam):
-            r, g, b = result[icam]
-            X[0, icam] = r
-
+        result = np.array([sample_grid_ravel(*args)[0] for args in arglist], dtype="float32") #only gray channel
+        X = result[None]
+        assert result.shape == (self.ncam, self.nvox, self.nvox, self.nvox)
         assert self.norm_im
+        return [None, None], None
         X = processing.preprocess_3d(X)
-        # X = X.cpu().numpy()
+        X = np.moveaxis(X, 1, -1) #(1, self.nvox, self.nvox, self.nvox, self.ncam)
+
+        return [None, None], None
         
         y_3d = np.empty((1, self.nvox, self.nvox, self.nvox, 14), dtype="float32")
-        X = np.moveaxis(X, 1, -1) #(1, self.nvox, self.nvox, self.nvox, self.ncam)
         return [X[0], xgrid_roi[0]], y_3d[0]
 
 

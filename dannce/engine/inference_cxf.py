@@ -326,13 +326,7 @@ def infer_dannce_max_trt(
 
         X, X_grid = input.cpu().numpy(), np.zeros((*shape[:-1], 2), dtype='float16')
 
-        # for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
-        #     assert not params["expval"]
-        #     # pred_wait = mid_gpu(X, dtype, model)
-        #     X_next, X_grid_next = pre_cpu(generator, i)
-        # return 
-
-        for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
+        for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind), position=generator.gpu, desc=f'[{generator.gpu}]')):
             assert not params["expval"]
             pred_wait = mid_gpu(X, dtype, model)
             X_next, X_grid_next = pre_cpu(generator, i)
@@ -366,16 +360,16 @@ def post_cpu(pred,X_grid,idx,i,partition, save_data):
     for j in range(pred.shape[0]):
         preds = pred[j].float()
         pred_max = preds.max(0).values.max(0).values.max(0).values
-        pred_total = preds.sum((0, 1, 2))
+        # pred_total = preds.sum((0, 1, 2))
         (xcoord, ycoord, zcoord) = processing.plot_markers_3d_torch(preds)
         coord = X_grid[j][xcoord.cpu().numpy(), ycoord.cpu().numpy(), zcoord.cpu().numpy(), :].T
         com_3d = X_grid[j][[0,-1], [0,-1], [0,-1]].mean(axis=0)
-        pred_log = pred_max.log() - pred_total.log()
+        # pred_log = pred_max.log() - pred_total.log()
         sampleID = partition["valid_sampleIDs"][i * pred.shape[0] + j]
         save_data[idx * pred.shape[0] + j] = {
             "pred_max": pred_max.cpu().numpy(),
             "pred_coord": coord.astype(np.float32),
-            "logmax": pred_log.cpu().numpy(),
+            # "logmax": pred_log.cpu().numpy(),
             "com_3d": com_3d,
             "sampleID": sampleID,
         }
