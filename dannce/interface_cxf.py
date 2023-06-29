@@ -19,7 +19,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger, TensorBoard
 import dannce.engine.serve_data_DANNCE as serve_data_DANNCE
 from dannce.engine.generator_cxf import DataGenerator_3Dconv
 # from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch_video_canvas_faster as DataGenerator_3Dconv_torch_video
-from dannce.engine.generator_cxf_ultra import DataGenerator_3Dconv_torch_video_canvas_ultrafaster as DataGenerator_3Dconv_torch_video
+from dannce.engine.generator_cxf_ultra import DataGenerator_3Dconv_torch_video_canvas_multivoxel as DataGenerator_3Dconv_torch_video
 
 # from dannce.engine.generator_cxf_faster import DataGenerator_3Dconv_torch_video_canvas_ultrafaster as DataGenerator_3Dconv_torch_video
 # from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch_video_canvas_faster_single as DataGenerator_3Dconv_torch_video_single
@@ -1342,6 +1342,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
         "predict_flag": True,
         "gpu_id": str(gpu_id),
     }
+    if "vol_size_list" in params and params["vol_size_list"]:
+        valid_params["vol_size_list"] = params["vol_size_list"]
 
     # Datasets
     partition = {"valid_sampleIDs": [f'0_{i}' for i in range(180000)]}

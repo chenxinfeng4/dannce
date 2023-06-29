@@ -1333,7 +1333,8 @@ class DataGenerator_3Dconv_torch(DataGenerator):
         mirror=False,
         predict_flag=False,
         exp_voxel_size = None,
-        return_Xgrid=False  #cxf private
+        return_Xgrid=False,  #cxf private
+        **kwargs
     ):
         """Initialize data generator.
 
@@ -1425,6 +1426,7 @@ class DataGenerator_3Dconv_torch(DataGenerator):
         # If saving npy as uint8 rather than training directly, dont normalize
         self.norm_im = norm_im
         self.exp_voxel_size = exp_voxel_size
+        self.kwargs = kwargs
 
         self.return_Xgrid = return_Xgrid
         # importing torch here allows other modes to run without pytorch installed
