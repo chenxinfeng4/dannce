@@ -11,7 +11,6 @@ from dannce.engine import ops
 from typing import List, Dict, Text, Tuple, Union
 import torch
 import matplotlib
-from dannce.engine.processing_cxf import savedata_tomat, savedata_expval
 import tqdm
 import keras as K
 import torch
@@ -93,30 +92,6 @@ def infer_dannce(
         n_chn (int): Number of output channels
     """
     for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
-        if (i - start_ind) % 1000 == 0 and i != start_ind:
-            print("Saving checkpoint at {}th batch".format(i))
-            if params["expval"]:
-                p_n = savedata_expval(
-                    params["dannce_predict_dir"] + "save_data_AVG.mat",
-                    params,
-                    write=True,
-                    data=save_data,
-                    tcoord=False,
-                    num_markers=n_chn,
-                    pmax=True,
-                )
-            else:
-                p_n = savedata_tomat(
-                    params["dannce_predict_dir"] + "save_data_MAX.mat",
-                    params,
-                    params["vmin"],
-                    params["vmax"],
-                    params["nvox"],
-                    write=True,
-                    data=save_data,
-                    num_markers=n_chn,
-                    tcoord=False,
-                )
 
         ims = generator.__getitem__(i)
         pred = model.predict(ims[0])

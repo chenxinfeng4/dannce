@@ -244,7 +244,7 @@ class DataGenerator_3Dconv_torch_video_canvas_multivoxel(DataGenerator_3Dconv_to
         coms_3d = coms_3d.reshape(-1, coms_3d.shape[-1])
         self.voxel_size_list = self.kwargs.get("vol_size_list", None)
         if self.voxel_size_list is None or self.voxel_size_list is []:
-            self.voxel_size_list = [self.exp_voxel_size]*self.nclass
+            self.voxel_size_list = [self.kwargs["vol_size"]]*self.nclass
         else:
             assert len(self.voxel_size_list) == self.nclass
 

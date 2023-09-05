@@ -208,6 +208,13 @@ def add_shared_args(
         help="If true, uses a single video file for multiple views.",
     )
 
+    parser.add_argument(
+        "--max-eval-batch",
+        dest="max_eval_batch",
+        type=int,
+        help="Maximum number of batches to evaluate.",
+        default=None
+    )
     return parser
 
 

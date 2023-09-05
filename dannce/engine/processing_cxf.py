@@ -21,7 +21,8 @@ import pickle
 import yaml
 import shutil
 import time
-
+from dannce.utils_cxf.cameraIntrinsics_OpenCV import matlab_pose_to_cv2_pose
+from multiview_calib.calibpkl_predict import CalibPredict
 
 def initialize_vids(CONFIG_PARAMS, datadict, e, vids, pathonly=True):
     """
@@ -1284,34 +1285,36 @@ def savedata_expval(
         }
     sdict.update(otherParams)
 
-    pickle.dump(sdict, open(os.path.splitext(fname)[0]+'.pkl', 'wb'))
-
-    if 'imageNames' in sdict:
-        sdict['imageNames'] = [np.array(imageName, dtype=object)
-                            for imageName in sdict['imageNames']]
+    # pickle.dump(sdict, open(os.path.splitext(fname)[0]+'.pkl', 'wb'))
     if 'camnames'   in sdict:
         sdict['camnames'] = [np.array(camname, dtype=object)
                             for camname in sdict['camnames']]
+    
+    if 'imageNames' in sdict and len(sdict['imageNames']):
+        sdict['imageNames'] = [np.array(imageName, dtype=object)
+                            for imageName in sdict['imageNames']]
+        outmat = os.path.splitext(fname)[0]+'_dannce_predict.mat'
+        sio.savemat(outmat, sdict)
 
-    if write and data is None:
-        sio.savemat(
-            fname.split(".pickle")[0] + ".mat", sdict,
-        )
-    elif write and data is not None:
-        sio.savemat(fname, sdict)
-
-    # save to pickle
-    keypoints_xyz_ba = d_coords.transpose((0, 2, 1))[:, None, :, :]  # (nTime, 1, n_markers, 3)
-    keypoints_xyz_baglobal = keypoints_xyz_ba
-    keypoints_xyz_pmax = p_max[:, None, :]   #(nTime, 1, n_markers)
-    outdata = {
-        "keypoints_xyz_baglobal": keypoints_xyz_baglobal,
-        "keypoints_xyz_pmax": keypoints_xyz_pmax,
-        "pred": d_coords,
-        "p_max": p_max,
-        "metadata": prepare_save_metadata(params),
-    }
-    pickle.dump(outdata, open(os.path.splitext(fname)[0]+'.voxpkl', 'wb'))
+    # save to matcalibpkl
+    nclass = otherParams['nclass'] if 'nclass' in otherParams else 1
+    pts3d = data_3D.reshape((data_3D.shape[0], -1, 3)) # (N, K, 3)
+    N, K, _ = pts3d.shape
+    keypoints_xyz_ba = pts3d.reshape(N//nclass, nclass, K, 3)  # (nTime, nclass, n_markers, 3)
+    keypoints_xyz_pmax = p_max.reshape(N//nclass, nclass, K)   # (nTime, nclass, n_markers)
+    coms_3d = com_3D.reshape(N//nclass, nclass, 3) # (nTime, nclass, 3)
+    camParams = sdict['metadata']['camParams']
+    poses = matlab_pose_to_cv2_pose(camParams)
+    calibPredict = CalibPredict({'ba_poses': poses})
+    keypoints_xy_ba = calibPredict.p3d_to_p2d(keypoints_xyz_ba)
+    videofile = os.path.splitext(fname)[0] + '.mp4'
+    outdata = {'keypoints_xyz_ba': keypoints_xyz_ba.astype(np.float16),
+            'info': {'fps': 30, 'vfile':videofile},
+            'keypoints_xy_ba': keypoints_xy_ba.astype(np.float16),
+            'extra': {'keypoints_xyz_pmax': keypoints_xyz_pmax.astype(np.float16), 
+                      'coms_3d': coms_3d.astype(np.float16)},
+            'ba_poses': poses}
+    pickle.dump(outdata, open(fname, 'wb'))
     return d_coords, t_coords, p_max, sID
 
 

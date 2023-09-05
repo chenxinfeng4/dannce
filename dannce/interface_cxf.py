@@ -30,7 +30,7 @@ from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch
 from dannce.engine.generator import DataGenerator_3Dconv_tf
 
 import dannce.engine.processing_cxf as processing
-from dannce.engine.processing_cxf import savedata_tomat, savedata_expval
+from dannce.engine.processing_cxf import savedata_expval
 from dannce.engine import nets, losses, ops, io
 from dannce import (
     _param_defaults_dannce,
@@ -1005,7 +1005,7 @@ def dannce_predict(params: Dict):
                     'camParams': camParams,
                     'camnames': camnames}
     mdl_filebase = os.path.basename(os.path.splitext(mdl_file)[0])
-    path = os.path.join(params["dannce_predict_dir"], f"{mdl_filebase}_dannce_predict.mat")
+    path = os.path.join(params["dannce_predict_dir"], f"{mdl_filebase}.matcalibpkl")
     p_n = savedata_expval(
         path,
         params,
@@ -1248,7 +1248,7 @@ def dannce_predict_video(params: Dict, video_file: str):
         n_chn,
     )
 
-    path = os.path.splitext(video_file)[0] + '_dannce_predict.mat'
+    path = os.path.splitext(video_file)[0] + '.matcalibpkl'
     otherParams = {'imageNames': [], 
                     'com3d': [],
                     'vol_size': params['vol_size'],
@@ -1274,6 +1274,7 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     """
     # Save 
     import yaml
+    from lilab.paralleltool.gpuquery_api import GpuQuery
     params['crop_width'] = np.array(params['crop_width']).tolist()
     params['crop_height'] = np.array(params['crop_height']).tolist()
     yaml.dump(params, open('params.yaml', 'w'))
@@ -1282,6 +1283,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     params["depth"] = False
     n_views = int(params["n_views"])
     gpu_id = int(params["gpu_id"])
+    gpuGuery = GpuQuery()
+    gpu_id = gpuGuery.get()
     device = f'cuda:{gpu_id}'
     params["base_exp_folder"] = '.'
     datadict = {}      #label:= filenames
@@ -1295,6 +1298,7 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     print('Load camera params from segpkl')
     pklfile = os.path.splitext(video_file)[0] + '.segpkl'
     pkldata = pickle.load(open(pklfile, 'rb'))
+    nclass = len(pkldata['segdata'][0][0][1])
     camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
     ncamera = len(camParams)
     assert ncamera == n_views, 'ncamera != n_views'
@@ -1344,6 +1348,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     }
     if "vol_size_list" in params and params["vol_size_list"]:
         valid_params["vol_size_list"] = params["vol_size_list"]
+    else:
+        valid_params['vol_size'] = params['vol_size']
 
     # Datasets
     partition = {"valid_sampleIDs": [f'0_{i}' for i in range(180000)]}
@@ -1370,7 +1376,10 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     # Load model from tensorrt
     assert params["dannce_predict_model"] is not None
     mdl_file = params["dannce_predict_model"]
-    mdl_file = mdl_file.replace('.hdf5', '.engine')
+    if nclass==2:
+        mdl_file = mdl_file.replace('.hdf5', '.engine')
+    else:
+        mdl_file = mdl_file.replace('.hdf5', '_dynamic.engine')
     print("Loading model from " + mdl_file)
     assert os.path.exists(mdl_file), f"Model file {mdl_file} not found"
 
@@ -1411,7 +1420,7 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
         n_chn,
     )
 
-    path = os.path.splitext(video_file)[0] + '_dannce_predict.mat'
+    path = os.path.splitext(video_file)[0] + '.matcalibpkl'
     otherParams = {'imageNames': [], 
                     'com3d': [],
                     'nclass': valid_generator.nclass,
@@ -1428,15 +1437,3 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
         pmax=True,
         otherParams=otherParams,
     )
-
-def new_func1(pkldata):
-    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
-    return camParams
-
-def new_func(pkldata):
-    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
-    return camParams
-
-def new_func(pkldata):
-    camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
-    return camParams
