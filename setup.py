@@ -17,7 +17,7 @@ setup(
         "attrs",
         "multiprocess",
         "opencv-python",
-        "tensorflow==2.7",
+        #"tensorflow==2.7",
         "torch",
     ],
     scripts=['cluster/holy_dannce_train.sh',

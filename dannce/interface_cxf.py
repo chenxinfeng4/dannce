@@ -1,5 +1,4 @@
 """Handle training and prediction for DANNCE and COM networks."""
-from pkg_resources import packaging
 import sys
 import numpy as np
 import os
@@ -1283,8 +1282,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     params["depth"] = False
     n_views = int(params["n_views"])
     gpu_id = int(params["gpu_id"])
-    gpuGuery = GpuQuery()
-    gpu_id = gpuGuery.get()
+    # gpuGuery = GpuQuery()
+    # gpu_id = gpuGuery.get()
     device = f'cuda:{gpu_id}'
     params["base_exp_folder"] = '.'
     datadict = {}      #label:= filenames

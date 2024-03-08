@@ -309,6 +309,7 @@ def infer_dannce_max_trt(
             pred = pred_wait
             post_cpu(pred,X_grid,idx-1,i-1,partition, save_data)
             X, X_grid = X_next, X_grid_next
+            # X[...,1] = 0
 
         pred_wait = mid_gpu(X, dtype, model)
         torch.cuda.current_stream().synchronize()
