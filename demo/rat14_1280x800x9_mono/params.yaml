@@ -1,0 +1,113 @@
+augment_bright_val: 0.05
+augment_brightness: false
+augment_continuous_rotation: false
+augment_hue: false
+augment_hue_val: 0.05
+augment_rotation_val: 15
+base_config: ../../configs/dannce_marmoset_1280x800x6_max_config.yaml
+batch_size: 4
+cam3_train: null
+camnames:
+- Camera1
+- Camera2
+- Camera3
+- Camera4
+- Camera5
+- Camera6
+channel_combo: false
+chunks: null
+com_file: null
+com_fromlabels: false
+com_method: median
+com_predict_dir: ./COM/predict_results/
+com_thresh: null
+com_train_dir: ./COM/train_results/
+comthresh: 0
+crop_height:
+- 0
+- 600
+crop_width:
+- 0
+- 800
+cthresh: null
+dannce_finetune_weights: /home/liying_lab/chenxinfeng/DATA/dannce/demo/rat14_1280x800x9_mono/DANNCE/train_results/MAX/epoch50.hdf5_initial_young
+dannce_predict_dir: ./DANNCE/predict_results/
+dannce_predict_model: ./DANNCE/train_results/MAX/latest.hdf5
+dannce_predict_vol_tifdir: null
+dannce_train_dir: ./DANNCE/train_results/MAX/
+data_split_seed: null
+debug_volume_tifdir: null
+depth: false
+downfac: null
+drop_landmark: null
+epochs: 101
+exp:
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_groom_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_groom_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-12_zyq_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_voxel_anno_dannce.mat
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_2_voxel_anno_dannce.mat
+expval: false
+extension: null
+from_weights: null
+gpu_id: '1'
+heatmap_reg: false
+heatmap_reg_coeff: 0.01
+immode: vid
+interp: nearest
+io_config: io_max.yaml
+load_valid: null
+lockfirst: null
+loss: mask_nan_keep_loss
+lr: 0.001
+max_eval_batch: null
+max_num_samples: null
+maxbatch: max
+medfilt_window: null
+metric:
+- euclidean_distance_3D
+mirror: false
+mono: true
+multi_gpu_train: false
+n_channels_in: 3
+n_channels_out: 14
+n_instances: 1
+n_layers_locked: 2
+n_rand_views: null
+n_views: 6
+net: unet3d_big
+net_type: MAX
+new_last_kernel_size:
+- 3
+- 3
+- 3
+new_n_channels_out: 14
+num_train_per_exp: null
+num_validation_per_exp: 10
+nvox: 64
+predict_exp:
+- label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_voxel_anno_dannce.mat
+predict_mode: torch
+predict_video_single_rat: false
+rand_view_replace: true
+raw_im_h: 600
+raw_im_w: 800
+rotate: true
+save_pred_targets: false
+sigma: 10
+start_batch: 0
+start_sample: null
+train_mode: continued
+use_npy: false
+valid_exp: null
+verbose: 1
+vid_dir_flag: null
+viddir: videos
+video_file: /mnt/liying.cibr.ac.cn_Data_Temp/marmoset_camera3_cxf/2024-4-13-singlemarmoset/2024-04-13_13-51-10.mp4
+vmax: 120.0
+vmin: -120.0
+vol_size: 240
+weighted: false
+write_npy: null

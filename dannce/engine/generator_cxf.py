@@ -12,6 +12,7 @@ import scipy.ndimage.interpolation
 import tensorflow as tf
 from typing import Union
 from lilab.cameras_setup import get_view_xywh_wrapper
+from multiview_calib.calibpkl_predict import CalibPredict
 from dannce.engine.com_detection_cxf import ims_to_com2ds, matlab_pose_to_cv2_pose, com2ds_to_com3d
 import torch
 
@@ -483,7 +484,7 @@ class DataGenerator_3Dconv(DataGenerator):
                             + (x_coord_3d - this_y_3d[0, j]) ** 2
                             + (z_coord_3d - this_y_3d[2, j]) ** 2
                         )
-                        / (2 * self.out_scale ** 2)
+                        / (2 * (self.out_scale)** 2)
                     )
                     # When the voxel grid is coarse, we will likely miss
                     # the peak of the probability distribution, as it
@@ -1634,7 +1635,8 @@ class DataGenerator_3Dconv_torch(DataGenerator):
         assert not self.depth
         X = torch.zeros(
             (
-                self.batch_size * len(self.camnames[first_exp]),
+                self.batch_size,
+                len(self.camnames[first_exp]),
                 *self.dim_out_3d,
                 self.n_channels_in,
             ),
@@ -1666,6 +1668,7 @@ class DataGenerator_3Dconv_torch(DataGenerator):
 
 
         # Generate data
+        assert len(list_IDs_temp)==1
         for i, ID in enumerate(list_IDs_temp):
             ts = time.time()
             sampleID = int(ID.split("_")[1])
@@ -1697,9 +1700,14 @@ class DataGenerator_3Dconv_torch(DataGenerator):
             xgrid = grids + this_COM_3d[0]
             ygrid = grids + this_COM_3d[1]
             zgrid = grids + this_COM_3d[2]
+
             (x_coord_3d, y_coord_3d, z_coord_3d) = torch.meshgrid(
                 xgrid, ygrid, zgrid
             )
+            #data = {'xy':x_coord_3d.reshape(4096,64).cpu().numpy()}
+            #file = '/home/liying_lab/chenxinfeng/DATA/dannce/demo_marmoset/marmoset_2560x1440x5_demo'
+            #with open('data.json', 'w') as json_file:
+                #json.dump(data,json_file)
             X_grid[i] = torch.stack(
                 (
                     x_coord_3d.transpose(0, 1).flatten(),
@@ -1709,175 +1717,68 @@ class DataGenerator_3Dconv_torch(DataGenerator):
                 axis=1,
             )
 
-            if self.mode == "3dprob":
-                X_grid_i = X_grid[i].reshape(*x_coord_3d.shape, 3)
-                for j in range(self.n_channels_out):
-                    y_3d[i, j] = torch.exp(
-                        - torch.sum((X_grid_i - this_y_3d[:,j])**2, dim=-1)
-                        / (2 * self.out_scale ** 2)
-                    )
-
-            if self.mode == "coordinates":
-                if this_y_3d.shape == y_3d[i].shape:
-                    y_3d[i] = this_y_3d
-                else:
-                    msg = "Note: ignoring dimension mismatch in 3D labels"
-                    warnings.warn(msg)
+            assert self.mode == "3dprob"
+            X_grid_i = X_grid[i].reshape(*x_coord_3d.shape, 3)
+            for j in range(self.n_channels_out):
+                y_3d[i, j] = torch.exp(
+                    - torch.sum((X_grid_i - this_y_3d[:,j])**2, dim=-1)
+                    / (2 * self.out_scale ** 2)
+                )
 
             # Compute projected images in parallel using multithreading
             ts = time.time()
             num_cams = len(self.camnames[experimentID])
             arglist = []
-            if self.mirror:
-                # Here we only load the video once, and then parallelize the projection
-                # and sampling after mirror flipping. For setups that collect views
-                # in a single imgae with the use of mirrors
-                loadim = self.load_frame.load_vid_frame(
-                    self.labels[ID]["frames"][self.camnames[experimentID][0]],
-                    self.camnames[experimentID][0],
-                    extension=self.extension,
-                )[
-                    self.crop_height[0]: self.crop_height[1],
-                    self.crop_width[0]: self.crop_width[1],
-                ]
-                for c in range(num_cams):
-                    arglist.append(
-                        [X_grid[i], self.camnames[experimentID][c], ID, experimentID, loadim]
-                    )
-                # result = self.threadpool.starmap(self.pj_grid_mirror, arglist)
-                result = [self.pj_grid_mirror(*arg) for arg in arglist]
-            else:
-                views = get_view_xywh_wrapper(len(self.camera_params[experimentID]))
-                imfile = self.labels[ID]
-                # im_canvas = imageio.imread(imfile)  #old
-                im_canvas = imread(imfile)  #new
-                # print('Load image tooks {} sec.'.format(time.time()-ts))
-                ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
-                for c in range(num_cams):
-                    arglist.append(
-                        [X_grid[i], self.camnames[experimentID][c], ID, experimentID, ims[c]]
-                    )
-                # result = self.threadpool.starmap(self.project_grid, arglist)
-                ts = time.time()
-                result = [self.project_grid(*arg) for arg in arglist]
-                # print('Project took {} sec.'.format(time.time()-ts))
+            assert not self.mirror
+        
+            views = get_view_xywh_wrapper(len(self.camera_params[experimentID]))
+            imfile = self.labels[ID]
+            # im_canvas = imageio.imread(imfile)  #old
+            im_canvas = imread(imfile)  #new
+            # print('Load image tooks {} sec.'.format(time.time()-ts))
+            ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
+            for c in range(num_cams):
+                arglist.append(
+                    [X_grid[i], self.camnames[experimentID][c], ID, experimentID, ims[c]]
+                )
+            # result = self.threadpool.starmap(self.project_grid, arglist)
+            ts = time.time()
+            result = [self.project_grid(*arg) for arg in arglist]
+            # print('Project took {} sec.'.format(time.time()-ts))
 
             for c in range(num_cams):
-                ic = c + i * len(self.camnames[experimentID])
-                X[ic, :, :, :, :] = result[c]
+                X[i, c] = result[c]
             # print('MP took {} sec.'.format(time.time()-ts))
 
-        if self.multicam:
-            X = X.reshape(
-                (
-                    self.batch_size,
-                    len(self.camnames[first_exp]),
-                    X.shape[1],
-                    X.shape[2],
-                    X.shape[3],
-                    X.shape[4],
-                )
+        y_3d = y_3d.permute([0, 2, 3, 4, 1])
+        assert self.mono and self.n_channels_in == 3
+        X = (
+                X[..., 0] * 0.2125
+                + X[..., 1] * 0.7154
+                + X[..., 2] * 0.0721
             )
-            X = X.permute((0, 2, 3, 4, 5, 1))
+        assert self.multicam
+        X = X.permute((0, 2, 3, 4, 1))#torch.Size([1, 64, 64, 64, 5])
 
-            if self.channel_combo == "avg":
-                X = torch.mean(X, axis=-1)
-
-            # Randomly reorder the cameras fed into the first layer
-            elif self.channel_combo == "random":
-                X = X[:, :, :, :, :, torch.randperm(X.shape[-1])]
-
-                X = X.transpose(4, 5).reshape(
-                    (
-                        X.shape[0],
-                        X.shape[1],
-                        X.shape[2],
-                        X.shape[3],
-                        X.shape[4] * X.shape[5],
-                    )
-                )
-            else:
-                X = X.transpose(4, 5).reshape(
-                    (
-                        X.shape[0],
-                        X.shape[1],
-                        X.shape[2],
-                        X.shape[3],
-                        X.shape[4] * X.shape[5],
-                    )
-                )
-        else:
-            # Then leave the batch_size and num_cams combined
-            y_3d = y_3d.repeat(num_cams, 1, 1, 1, 1)
-
-        # 3dprob is required for *training* MAX networks
-        if self.mode == "3dprob":
-            y_3d = y_3d.permute([0, 2, 3, 4, 1])
-
-        if self.rotation:
-            if self.expval:
-                # First make X_grid 3d
-                X_grid = torch.reshape(
-                    X_grid,
-                    (self.batch_size, self.nvox, self.nvox, self.nvox, 3),
-                )
-
-                X, X_grid = self.random_rotate(X, X_grid)
-                # Need to reshape back to raveled version
-                X_grid = torch.reshape(X_grid, (self.batch_size, -1, 3))
-            else:
-                X, y_3d = self.random_rotate(X, y_3d)
-
-        if self.mono and self.n_channels_in == 3:
-            # Convert from RGB to mono using the skimage formula. Drop the duplicated frames.
-            # Reshape so RGB can be processed easily.
-            X = torch.reshape(
-                X,
-                (
-                    X.shape[0],
-                    X.shape[1],
-                    X.shape[2],
-                    X.shape[3],
-                    len(self.camnames[first_exp]),
-                    -1,
-                ),
-            )
-            X = (
-                X[:, :, :, :, :, 0] * 0.2125
-                + X[:, :, :, :, :, 1] * 0.7154
-                + X[:, :, :, :, :, 2] * 0.0721
-            )
+        # Randomly reorder the cameras fed into the first layer
+        assert not self.rotation
 
         # Convert pytorch tensors back to numpy array
-        ts = time.time()
         if torch.is_tensor(X):
             X = X.float().cpu().numpy()
         if torch.is_tensor(y_3d):
             y_3d = y_3d.cpu().numpy()
-        # print('Numpy took {} sec'.format(time.time() - ts))
-
         if torch.is_tensor(X_grid):
             X_grid = X_grid.cpu().numpy()
-        if self.expval:
-            if self.var_reg:
-                return (
-                    [processing.preprocess_3d(X), X_grid],
-                    [y_3d, torch.zeros((self.batch_size, 1))],
-                )
-
-            if self.norm_im:
-                # y_3d is in coordinates here.
-                return [processing.preprocess_3d(X), X_grid], y_3d
-            else:
-                return [X, X_grid], y_3d
+        assert not self.expval
+        assert self.norm_im
+        X = processing.preprocess_3d(X)
+        if self.return_Xgrid:
+            X_grid = X_grid.reshape(*X.shape[:-1], X_grid.shape[-1])
+            return [X, X_grid], y_3d
         else:
-            if self.norm_im:
-                X = processing.preprocess_3d(X)
-            if self.return_Xgrid:
-                X_grid = X_grid.reshape(*X.shape[:-1], X_grid.shape[-1])
-                return [X, X_grid], y_3d
-            else:
-                return X, y_3d
+            return X, y_3d
+        
 
 class DataGenerator_3Dconv_torch_video(DataGenerator_3Dconv_torch):
     def __init__(
@@ -1891,6 +1792,7 @@ class DataGenerator_3Dconv_torch_video(DataGenerator_3Dconv_torch):
         assert self.vidreaders is None, "Video readers are not supported for video data"
         assert not self.rotation, "Rotation is not supported for video data"
         self.ba_pose = matlab_pose_to_cv2_pose(self.camera_params[0])
+        self.calibobj = CalibPredict({'ba_poses': self.ba_pose})
 
     def set_video(self, videopath):
         assert os.path.exists(videopath), "Video file not found"
@@ -1931,7 +1833,8 @@ class DataGenerator_3Dconv_torch_video(DataGenerator_3Dconv_torch):
             assert ret
             ims = [im_canvas[y:y+h, x:x+w] for (x,y,w,h) in views]
             coms_2d = ims_to_com2ds(ims)
-            coms_3d = com2ds_to_com3d(coms_2d, self.ba_pose)
+            # coms_3d = com2ds_to_com3d(coms_2d, self.ba_pose)
+            coms_3d = self.calibobj.p2d_to_p3d(coms_2d)
 
             # For 3D ground truth
             this_y_3d = torch.zeros(
@@ -2382,13 +2285,13 @@ class DataGenerator_3Dconv_torch_video_canvas_faster(DataGenerator_3Dconv_torch)
         X = result[None]
         assert result.shape == (self.ncam, self.nvox, self.nvox, self.nvox)
         assert self.norm_im
-        return [None, None], None
+        #return [None, None], None
         X = processing.preprocess_3d(X)
         X = np.moveaxis(X, 1, -1) #(1, self.nvox, self.nvox, self.nvox, self.ncam)
 
-        return [None, None], None
+        #return [None, None], None
         
-        y_3d = np.empty((1, self.nvox, self.nvox, self.nvox, 14), dtype="float32")
+        y_3d = np.empty((1, self.nvox, self.nvox, self.nvox, 16), dtype="float32")
         return [X[0], xgrid_roi[0]], y_3d[0]
 
 
@@ -2801,18 +2704,26 @@ class DataGenerator_3Dconv_frommem(keras.utils.Sequence):
             else:
                 X, y_3d = self.random_rotate(X.copy(), y_3d.copy())
 
+        # random flip
         if np.random.random() < 0.5 and not self.expval:
-            flipidx = [0,2,1,3,4,5,8,9,6,7,12,13,10,11]
+            #flipidx = [0,2,1,3,4,5,8,9,6,7,12,13,10,11]
+            if y_3d.shape[-1]==14:
+                flipidx = [0,2,1,3,4,5,8,9,6,7,12,13,10,11]
+            elif y_3d.shape[-1]==16:
+                flipidx = [0,2,1,3,4,5,9,10,11,6,7,8,14,15,12,13]
+            else:
+                raise ValueError("Unsupported shape for y_3d. The last dimension must be either 14 or 16.")
             X= np.flip(X, axis=1)
             y_3d_tmp = y_3d[...,None,:]
-            y_3d_tmp2 = y_3d_tmp.reshape(*y_3d.shape[:-1],-1,14)
+            y_3d_tmp2 = y_3d_tmp.reshape(*y_3d.shape[:-1],-1,y_3d.shape[-1])
             y_3d_tmp3 = np.flip(y_3d_tmp2, axis=1)
             y_3d_tmp4 = y_3d_tmp3[...,flipidx]
             y_3d = y_3d_tmp4.reshape(*y_3d.shape[:-1],-1)
             # y_3d = np.flip(y_3d, axis=1)
             # y_3d = y_3d[...,flipidx]
 
-        if np.random.random() < 0.5 and self.chan_num==1:  # random deactivate a camera
+        # random deactivate a camera
+        if np.random.random() < 0.5 and self.chan_num==1:  
             blackind = np.random.choice(X.shape[-1], 1)
             X[...,blackind] = np.min(X[0,0,...,0])
 
@@ -2887,28 +2798,15 @@ class DataGenerator_3Dconv_frommem(keras.utils.Sequence):
 
         if self.n_rand_views is not None:
             # Select a set of cameras randomly with replacement.
-            X = np.reshape(X,
-                           (X.shape[0],
-                            X.shape[1],
-                            X.shape[2],
-                            X.shape[3],
-                            self.chan_num,
-                            -1),
-                           order='F')
-            if self.replace:
-                X = X[..., np.random.randint(X.shape[-1], size=(self.n_rand_views,))]
-            else:
-                if not self.random:
-                    raise Exception("For replace=False for n_rand_views, random must be turned on")
-                X = X[:, :, :, :, :, :self.n_rand_views]
-            X = np.reshape(X,
-                           (X.shape[0],
-                            X.shape[1],
-                            X.shape[2],
-                            X.shape[3],
-                            X.shape[4]*X.shape[5]),
-                           order='F')
-
+            assert self.chan_num == 1, "Only implemented for single channel data"
+            ind_views = {9: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                         8: [0, 1, 3, 4, 5, 6, 7, 8],
+                         7: [0, 1, 3, 4, 5, 7, 8],
+                         6: [0, 1, 3, 4, 5, 7],
+                         5: [0, 1, 3, 5, 7],
+                         4: [0, 1, 3, 7],
+                         3: [1, 3, 7]}[self.n_rand_views]
+            X = X[..., ind_views]
         return X
 
     def get_max_gt_ind(self, X_grid, y_3d):

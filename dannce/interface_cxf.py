@@ -19,7 +19,6 @@ import dannce.engine.serve_data_DANNCE as serve_data_DANNCE
 from dannce.engine.generator_cxf import DataGenerator_3Dconv
 # from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch_video_canvas_faster as DataGenerator_3Dconv_torch_video
 from dannce.engine.generator_cxf_ultra import DataGenerator_3Dconv_torch_video_canvas_multivoxel as DataGenerator_3Dconv_torch_video
-
 # from dannce.engine.generator_cxf_faster import DataGenerator_3Dconv_torch_video_canvas_ultrafaster as DataGenerator_3Dconv_torch_video
 # from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch_video_canvas_faster_single as DataGenerator_3Dconv_torch_video_single
 from dannce.engine.generator_cxf_faster import DataGenerator_3Dconv_torch_video_canvas_ultrafaster_single as DataGenerator_3Dconv_torch_video_single
@@ -27,7 +26,6 @@ from dannce.engine.generator_cxf import DataGenerator_3Dconv_frommem
 from dannce.engine.generator import DataGenerator_3Dconv_npy
 from dannce.engine.generator_cxf import DataGenerator_3Dconv_torch
 from dannce.engine.generator import DataGenerator_3Dconv_tf
-
 import dannce.engine.processing_cxf as processing
 from dannce.engine.processing_cxf import savedata_expval
 from dannce.engine import nets, losses, ops, io
@@ -41,16 +39,13 @@ from dannce.utils_cxf.cameraIntrinsics_OpenCV import cv2_pose_to_matlab_pose
 import matplotlib
 import tqdm
 import pickle
-
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from typing import List, Dict, Text
-
 _DEFAULT_VIDDIR = "videos"
 _DEFAULT_COMSTRING = "COM"
 _DEFAULT_COMFILENAME = "com3d.mat"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-
 
 def check_unrecognized_params(params: Dict):
     """Check for invalid keys in the params dict against param defaults.
@@ -207,18 +202,18 @@ def dannce_train(params: Dict):
 
     for e, expdict in enumerate(exps):
         pts3d_T, com3d, camParams, imageNames, vol_size = load_label3d_dataset(expdict["label3d_file"])
+        ntime = pts3d_T.shape[0]
         
-        com3d_2 = com3d + np.concatenate([(np.random.rand(com3d.shape[0],2)-0.5)*20,
-                                (np.random.rand(com3d.shape[0],1)-0.5)*40], axis=1)
-        com3d_3 = com3d + np.concatenate([(np.random.rand(com3d.shape[0],2)-0.5)*20,
-                                (np.random.rand(com3d.shape[0],1)-0.5)*30], axis=1)
+        com3d_2 = com3d + np.concatenate([(np.random.rand(ntime,2)-0.5)*20,
+                                (np.random.rand(ntime,1)-0.5)*40], axis=1)
+        com3d_3 = com3d + np.concatenate([(np.random.rand(ntime,2)-0.5)*20,
+                                (np.random.rand(ntime,1)-0.5)*30], axis=1)
         if False:
             com3d = np.concatenate([com3d, com3d_3], axis=0)
             pts3d_T = np.concatenate([pts3d_T, pts3d_T], axis=0)
         else:
             com3d = com3d_2
-        imageNames = imageNames * 2
-        ntime = pts3d_T.shape[0]
+
         exp_id = str(e)
         frame_id = [exp_id+'_'+str(i) for i in range(ntime)]
         com3d_dict.update(dict(zip(frame_id, com3d)))
@@ -449,6 +444,7 @@ def dannce_train(params: Dict):
 
     # Now we can generate from memory with shuffling, rotation, etc.
     randflag = params["channel_combo"] == "random"
+    randflag = False
 
     assert not cam3_train
 
@@ -482,9 +478,10 @@ def dannce_train(params: Dict):
                          'augment_brightness': False,
                          'augment_continuous_rotation': False,
                          'shuffle': False,
-                         'replace': False,
-                         'n_rand_views': params["n_rand_views"] if cam3_train else None,
-                         'random': True if cam3_train else False}
+                         'replace': params["rand_view_replace"],
+                         'random': randflag,
+                         'n_rand_views': params["n_rand_views"]
+                         }
     if params["use_npy"]:
         genfunc = DataGenerator_3Dconv_npy
         args_train = {'list_IDs': partition["train_sampleIDs"],
@@ -530,6 +527,9 @@ def dannce_train(params: Dict):
     valid_generator = genfunc(**args_valid)
 
     Xtemp, Ytemp = train_generator[0]
+    Xtemp2, Ytemp2 = valid_generator[0]
+    print(f'Train: {Xtemp.shape}, {Ytemp.shape}')
+    print(f'Test : {Xtemp2.shape}, {Ytemp2.shape}')
     # Build net
     print("Initializing Network...")
 
@@ -547,16 +547,16 @@ def dannce_train(params: Dict):
     scoping = contextlib.suppress()
 
     print("NUM CAMERAS: {}".format(len(camnames[0])))
-
+    model_ncam = Xtemp.shape[-1]
     # with scoping:
     with strategy.scope():
         if params["train_mode"] == "new":
             model = params["net"](
                 params["loss"],
                 float(params["lr"]),
-                params["chan_num"] + params["depth"],
+                1,
                 params["n_channels_out"],
-                len(camnames[0]),
+                model_ncam,
                 batch_norm=False,
                 instance_norm=True,
                 include_top=True,
@@ -565,9 +565,9 @@ def dannce_train(params: Dict):
         elif params["train_mode"] == "finetune":
             fargs = [params["loss"],
                      float(params["lr"]),
-                     params["chan_num"] + params["depth"],
+                     1,
                      params["n_channels_out"],
-                     len(camnames[0]),
+                     model_ncam,
                      params["new_last_kernel_size"],
                      params["new_n_channels_out"],
                      params["dannce_finetune_weights"],
@@ -605,9 +605,9 @@ def dannce_train(params: Dict):
             model = params["net"](
                 params["loss"],
                 float(params["lr"]),
-                params["chan_num"] + params["depth"],
+                1,
                 params["n_channels_out"],
-                3 if cam3_train else len(camnames[0]),
+                model_ncam,
                 batch_norm=False,
                 instance_norm=True,
                 include_top=True,
@@ -727,7 +727,6 @@ def dannce_train(params: Dict):
     model.save(os.path.join(sdir, "fullmodel_end.hdf5"))
 
     print("done!")
-
 
 def dannce_predict(params: Dict):
     """Predict with dannce network
@@ -864,6 +863,7 @@ def dannce_predict(params: Dict):
     else:
         genfunc = DataGenerator_3Dconv
 
+    valid_params['channel_combo'] = False
     valid_generator = genfunc(
         partition["valid_sampleIDs"],
         datadict,
@@ -1015,6 +1015,7 @@ def dannce_predict(params: Dict):
         pmax=True,
         otherParams=otherParams,
     )
+
 
 def dannce_predict_video(params: Dict, video_file: str):
     """Predict with dannce network
@@ -1298,6 +1299,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     pklfile = os.path.splitext(video_file)[0] + '.segpkl'
     pkldata = pickle.load(open(pklfile, 'rb'))
     nclass = len(pkldata['segdata'][0][0][1])
+    #nclass = 1
+
     camParams = cv2_pose_to_matlab_pose(pkldata['ba_poses'])
     ncamera = len(camParams)
     assert ncamera == n_views, 'ncamera != n_views'
@@ -1359,7 +1362,7 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     # Generate the dataset
     flag = params['predict_video_single_rat'] # use single animal and no mask
     genfunc = DataGenerator_3Dconv_torch_video_single if flag else DataGenerator_3Dconv_torch_video
-    
+    #genfunc = DataGenerator_3Dconv_torch_video_single
     valid_generator = genfunc(
         partition["valid_sampleIDs"],
         datadict,
@@ -1378,7 +1381,8 @@ def dannce_predict_video_trt(params: Dict, video_file: str):
     if nclass==2:
         mdl_file = mdl_file.replace('.hdf5', '.engine')
     else:
-        mdl_file = mdl_file.replace('.hdf5', '_dynamic.engine')
+        #mdl_file = mdl_file.replace('.hdf5', '_dynamic.engine')
+        mdl_file = mdl_file.replace('.hdf5', '.engine')
     print("Loading model from " + mdl_file)
     assert os.path.exists(mdl_file), f"Model file {mdl_file} not found"
 

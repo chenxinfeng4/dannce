@@ -508,7 +508,6 @@ def triangulate_multi_instance_single_channel(
                 pts[n_cam] = pt
                 pts_inds[n_cam] = n_point
                 pts3d = ops.triangulate_multi_instance(pts, cams)
-
                 # Loop through each camera, reproject the point
                 # into image coordinates, and save the error.
                 error = 0

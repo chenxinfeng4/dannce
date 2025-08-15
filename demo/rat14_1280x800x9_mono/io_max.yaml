@@ -1,0 +1,67 @@
+# cd /home/liying_lab/chenxinfeng/DATA/dannce/demo/rat14_1280x800x9_mono
+# python -m lilab.dannce.s1_anno2dataset xxx/anno.mat
+# python /home/liying_lab/chenxinfeng/.conda/envs/mmdet/bin/dannce-train ../../configs/dannce_rat14_1280x800x9_max_config.yaml 
+
+### COM ###
+# path to folder where COM weights and logs will be saved
+com_train_dir: ./COM/train_results/
+com_predict_dir: ./COM/predict_results/
+num_validation_per_exp: 10
+
+
+# During prediction, will look for the last epoch weights saved to ./COM/train_results/. To load in a different weights file, add the path here
+#com_predict_weights: ./COM/train_results/weights.250-0.00036.hdf5
+
+### Dannce ###
+# path to folder where DANNCE weights and logs will be saved
+dannce_train_dir: ./DANNCE/train_results/MAX/
+dannce_predict_dir: ./DANNCE/predict_results/
+
+# During prediction, will look for the last epoch weights saved to ./DANNCE/train_results/. To load in a different weights file, add the path here
+# Note that this must be a FULL MODEL file, not just weights.
+dannce_predict_model: ./DANNCE/train_results/MAX/latest.hdf5
+# dannce_predict_model: ./DANNCE/train_results/AVG/weights.checkpoint.epoch250.val_loss40.30782.hdf5
+
+### Train load checkpoint ###
+train_mode: continued
+# train_mode: new
+# dannce_finetune_weights: /home/liying_lab/chenxinfeng/DATA/dannce/demo/rat14_800x600x6_mono_shank3_blackwhite/DANNCE/train_results/MAX/fullmodel_weights/fullmodel_end.hdf5
+# dannce_finetune_weights: ./DANNCE/train_results/MAX/latest.hdf5
+# dannce_finetune_weights: ./DANNCE/train_results/MAX/fullmodel_weights/fullmodel_end.hdf5
+dannce_finetune_weights: /home/liying_lab/chenxinfeng/DATA/dannce/demo/rat14_1280x800x9_mono/DANNCE/train_results/MAX/epoch50.hdf5_initial_young
+
+### Train Augmentation ###
+augment_continuous_rotation: False   #rotate the voxel
+augment_rotation_val: 15             #rotate the voxel
+
+channel_combo: False     # ['random' | False], shuffle the views
+n_rand_views: null       # choose n1 views out of n2 views
+
+### Train Data ###
+exp:
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_voxel_anno_dannce.mat'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_2_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_groom_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-14_lhj_groom_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-12_zyq_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_voxel_anno_dannce.mat'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_2_voxel_anno_dannce.mat'
+predict_exp:
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/bw_rat_1280x800x9_2022-10-13_SHANK3_voxel_anno_dannce.mat'
+
+
+predict_mode: torch
+
+epochs: 101
+mono: True
+vol_size: 190
+lr: 0.001
+
+raw_im_h: 800
+raw_im_w: 1280
+nvox: 64
+
+### Video prediction ###
+max_eval_batch: null #[number | null]

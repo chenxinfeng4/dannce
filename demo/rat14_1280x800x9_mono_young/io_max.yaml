@@ -1,7 +1,6 @@
 # cd /home/liying_lab/chenxinfeng/DATA/dannce/demo/rat14_1280x800x9_mono_young
-# python -m lilab.dannce.s1_anno2dataset anno.mat
 # python /home/liying_lab/chenxinfeng/.conda/envs/mmdet/bin/dannce-train ../../configs/dannce_rat14_1280x800x9_max_config.yaml 
-
+# python -m dannce.cli_train ../../configs/dannce_rat14_1280x800x9_max_config.yaml 
 ### VALIDATION ###
 num_validation_per_exp: 2
 
@@ -50,7 +49,7 @@ exp:
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-6-23_3_TPH2_voxel_re_com3d_vol170_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-6-23_3_TPH2_voxel_re_com3d_vol190_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-6-23_TPH2_voxel_re_com3d_vol170_anno_dannce.pkl'
-    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-6-23_TPH2_voxel_re_com3d_vol190_anno_dannce.pkl'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-6-23_TPH2_voxel_re_com3d_vol190_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data_metric/re_com3d/2022-10-10Tr_mask_re_com3d_vol150_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data_metric/re_com3d/2022-10-10Tr_mask_re_com3d_vol170_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data_metric/re_com3d/2022-10-13Temask_re_com3d_vol150_anno_dannce.pkl'
@@ -61,24 +60,29 @@ exp:
     # - label3d_file: /home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-04-06_voxel_re_com3d_vol170_anno_dannce.pkl
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_2_voxel_re_com3d_vol160_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_2_voxel_re_com3d_vol190_anno_dannce.pkl'
-    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_voxel_re_com3d_vol170_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_voxel_re_com3d_vol200_anno_dannce.pkl'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_voxel_re_com3d_vol170_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2022-4-25_wt_voxel_re_com3d_vol200_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-07_press_voxel_re_com3d_vol190_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-07_press_voxel_re_com3d_vol220_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-13_press_voxel_re_com3d_vol210_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-13_press_voxel_re_com3d_vol240_anno_dannce.pkl'
-    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-6-25_WT_voxel_re_com3d_vol250_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-13_press_voxel_re_com3d_vol210_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-05-13_press_voxel_re_com3d_vol240_anno_dannce.pkl'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-6-25_WT_voxel_re_com3d_vol250_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-6-25_WT_voxel_re_com3d_vol280_anno_dannce.pkl'
     #- label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-6-25_2_WT_voxel_re_com3d_vol250_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-6-25_2_WT_voxel_re_com3d_vol280_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-9-19_zyq_08_voxel_re_com3d_vol160_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-9-19_zyq_08_voxel_re_com3d_vol160_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-9-19_zyq_08_voxel_re_com3d_vol190_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-9-19_zyq_09_voxel_re_com3d_vol180_anno_dannce.pkl'
     # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2023-9-19_zyq_09_voxel_re_com3d_vol210_anno_dannce.pkl'
     - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-13_Photometry_voxel_re_com3d_vol150_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-13_Photometry_voxel_re_com3d_vol180_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-14_Photometry_voxel_re_com3d_vol140_anno_dannce.pkl'
-    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-14_Photometry_voxel_re_com3d_vol170_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-13_Photometry_voxel_re_com3d_vol180_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-14_Photometry_voxel_re_com3d_vol140_anno_dannce.pkl'
+    # - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/w_rat_1280x800x9_2023-3-14_Photometry_voxel_re_com3d_vol170_anno_dannce.pkl'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2024-11-27_photometry_voxel_re_com3d_vol220_anno_dannce.pkl'
+    - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data/re_com3d/bw_rat_1280x800x9_2024-11-27_photometry_voxel_re_com3d_vol250_anno_dannce.pkl'
+
+
+
 
 predict_exp:
     - label3d_file: '/home/liying_lab/chenxinfeng/DATA/dannce/data_metric/re_com3d/2022-10-13Tr_mask_re_com3d_vol170_anno_dannce.pkl' #no use
@@ -86,7 +90,7 @@ predict_exp:
 
 predict_mode: torch
 
-epochs: 140
+epochs: 141
 mono: True
 vol_size: 165
 lr: 0.001

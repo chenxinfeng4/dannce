@@ -11,7 +11,6 @@ import scipy.io as sio
 from scipy.ndimage.filters import maximum_filter
 
 from dannce.engine import io_cxf as io
-import matplotlib
 import warnings
 
 # matplotlib.use("Agg")
@@ -83,7 +82,8 @@ def infer_params_img(params, dannce_net, prediction):
     """
     # Grab the camnames from *dannce.mat if not in config
     params["camnames"] = [f'Camera{i+1}' for i in range(params["n_views"])]
-    im_shape = [600, 800, 3] if params["n_views"]==6 else [800, 1280, 3]
+    im_shape = [params["raw_im_h"], params["raw_im_w"], 3]
+    #im_shape = [600, 800, 3] if params["n_views"]==6 else [800, 1280, 3]
     im = np.zeros(im_shape)
     print_and_set(params, "n_channels_in", im_shape[2])
 
@@ -1104,6 +1104,7 @@ def preprocess_3d(im_stack):
     im_stack /= 127.5
     im_stack -= 1.0
     return im_stack
+    
 
 
 def norm_im(im):

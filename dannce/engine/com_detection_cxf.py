@@ -1,4 +1,5 @@
-from lilab.multiview_scripts_dev.s4_matpkl2matcalibpkl import build_input_short, project_points_short
+# from lilab.multiview_scripts_dev.s4_matpkl2matcalibpkl import build_input_short, project_points_short
+from multiview_calib.calibpkl_predict import CalibPredict
 from scipy.ndimage.measurements import center_of_mass
 import numpy as np
 
@@ -50,17 +51,13 @@ def matlab_pose_to_cv2_pose(camParamsOrig):
 
 def com2ds_to_com3d(com2ds, poses):
     com2ds = np.array(com2ds)
-    com2ds = com2ds.reshape((-1, 1, 2))
-    viewsidx = list(range(len(poses)))
-    assert len(com2ds) == len(poses)
-    landmarks = {i:com2d for i, com2d in enumerate(com2ds)}
-    com_3d = build_input_short(viewsidx, poses, landmarks) # (1, 3)
+    calibPredict = CalibPredict({'ba_poses': poses})
+    com_3d = calibPredict.p2d_to_p3d(com2ds)
     com_3d = np.squeeze(com_3d)
     return com_3d
 
 
 def com3d_to_com2ds(com_3d, poses):
-    viewsidx = list(range(len(poses)))
-    com_2ds = project_points_short(viewsidx, poses, com_3d)
-    com_2ds = com_2ds[:,0,:]
+    calibPredict = CalibPredict({'ba_poses': poses})
+    com_2ds = calibPredict.p3d_to_p2d(com_3d)
     return com_2ds

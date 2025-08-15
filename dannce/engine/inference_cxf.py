@@ -213,7 +213,6 @@ def infer_dannce_max(
     with torch.cuda.device(device):
         if not iskeras:
             # model warmup
-            
             from torch2trt.torch2trt import torch_dtype_from_trt, torch_device_from_trt
             idx = model.engine.get_binding_index(model.input_names[0])
             dtype = torch_dtype_from_trt(model.engine.get_binding_dtype(idx))
@@ -221,12 +220,26 @@ def infer_dannce_max(
             input = torch.empty(size=shape, dtype=dtype).cuda()
             output = model(input)
             dtype = output.dtype
+        else:
+            shape = model.input_shape
 
         for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind))):
             assert not params["expval"]
             [X, X_grid], y = generator.__getitem__(i)
-
+            
             if iskeras:
+                if X.shape[-1] > shape[-1]:
+                    ind_views = {9: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                         8: [0, 1, 3, 4, 5, 6, 7, 8],
+                         7: [0, 1, 3, 4, 5, 7, 8],
+                         6: [0, 1, 3, 4, 5, 7],
+                         5: [0, 1, 3, 5, 7],
+                         4: [0, 1, 3, 7],
+                         3: [1, 3, 7]}[shape[-1]]
+                    X = X[..., ind_views]
+                else:
+                    # X = X[..., np.random.choice(np.arange(X.shape[-1]), shape[-1], replace=False)]
+                    pass
                 pred = model.predict(X)
             else:
                 # X_torch = torch.from_numpy(X).cuda().type(dtype)
@@ -299,13 +312,14 @@ def infer_dannce_max_trt(
         assert params["predict_mode"] == "torch"
         assert not params["expval"]
 
-        X, X_grid = input.cpu().numpy(), np.zeros((*shape[:-1], 2), dtype='float16')
+        X, X_grid = input.cpu().numpy(), np.zeros((*shape[:-1], 2), dtype='float16')#float16
 
         for idx, i in enumerate(tqdm.tqdm(range(start_ind, end_ind), position=generator.gpu, desc=f'[{generator.gpu}]')):
             assert not params["expval"]
             pred_wait = mid_gpu(X, dtype, model)
             X_next, X_grid_next = pre_cpu(generator, i)
-            torch.cuda.current_stream().synchronize()
+            #torch.cuda.current_stream().synchronize()
+            torch.cuda.current_stream().synchronize()    
             pred = pred_wait
             post_cpu(pred,X_grid,idx-1,i-1,partition, save_data)
             X, X_grid = X_next, X_grid_next
@@ -329,6 +343,7 @@ def mid_gpu(X, dtype, model):
     X_torch = torch.from_numpy(X).cuda().type(dtype)
     pred = model(X_torch)
     return pred
+
 
 
 def post_cpu(pred,X_grid,idx,i,partition, save_data):
